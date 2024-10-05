@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./all.css">
+    <link rel="stylesheet" href="./index.css">
+    <title>CipherDrop</title>
+</head>
+<body>
+    <div class="container">
+        <div class="wrapper">
+            <h1>CipherDrop</h1>
+            <h2>Anonymous File Upload</h2>
+            <p class="features">
+                <span>
+                    No logs
+                </span>
+
+                <span>
+                    Encrypted
+                </span>
+
+                <span>
+                    Open source
+                </span>
+
+                <span>
+                    Please use a VPN
+                </span>
+            </p>
+        </div>
+
+        <div class="wrapper">
+            <div class="select">
+                <select>
+                    <option value="1d">24 hours</option>
+                    <option value="7d">1 week</option>
+                    <option value="28d" selected="selected">4 weeks</option>
+                </select>
+            </div>
+
+            <div class="drop">
+                <button>
+                    Upload
+                </button>
+            </div>
+
+            <input type="file" multiple hidden>
+        </div>
+
+        <div class="wrapper">
+            <p>
+                Max 1GB uploads.
+            </p>
+
+            <div class="uploads">
+                <div class="uploading hidden">
+                    <span>
+                        index.html
+                    </span>
+
+                    <div class="loader">
+                        <div class="inner"></div>
+                    </div>
+                </div>
+
+                <div class="success hidden">
+                    <span>
+                        index.html
+                    </span>
+
+                    <div class="copy">
+                        <input type="text">
+                        <button>
+                            Copy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="fail hidden">
+                    <span>
+                        index.html
+                    </span>
+
+                    <div class="error">
+                        There went something wrong!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./index.js"></script>
+</body>
+</html>
