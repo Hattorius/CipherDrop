@@ -7,6 +7,11 @@ edition = "2021"
 actix-files = "0.6.6"
 actix-multipart = "0.7.2"
 actix-web = "4.9.0"
+aws-creds = "0.37"
+diesel = { version = "2.2.4", features = ["postgres", "r2d2"] }
+dotenvy = "0.15.7"
 futures-util = "0.3.31"
-sanitize-filename = "0.5.0"
+rust-s3 = "0.35.1"
+serde = "1.0.210"
+tokio-util = "0.7.12"
 uuid = { version = "1.10.0", features = ["v4"] }

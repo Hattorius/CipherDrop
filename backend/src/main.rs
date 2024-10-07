@@ -1,36 +1,42 @@
 use actix_files::Files;
 use actix_multipart::Multipart;
 use actix_web::{post, web, App, Error, HttpResponse, HttpServer};
-use futures_util::StreamExt as _;
-use std::fs::OpenOptions;
-use std::io::Write;
+use diesel::{r2d2, PgConnection};
+use futures_util::StreamExt;
 use uuid::Uuid;
 
+mod actions;
+mod models;
+mod s3;
+mod schema;
+
+type DbPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
 const MAX_SIZE: usize = 1_073_741_824; // 1GB in bytes
 
 #[post("/upload")]
-async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
-    // Initialize variables for form fields
+async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut file_name = None;
     let mut file_type = None;
-    let mut total_size = 0usize;
+    let mut safe_file_name = None;
 
-    // Create the uploads directory if it doesn't exist
-    std::fs::create_dir_all("uploads")?;
+    let bucket = match s3::get_s3_bucket_info(pool).await {
+        Some(bucket) => bucket,
+        None => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't receive storage")),
+    };
 
-    // Iterate over multipart stream
+    println!("4");
     while let Some(item) = payload.next().await {
+        println!("4.1");
         let mut field = item?;
         let content_disposition = field.content_disposition();
 
-        // Get the field name
         let name = content_disposition
             .and_then(|cd| cd.get_name())
             .unwrap_or("");
 
+        println!("4.2 {}", name);
         match name {
             "file_name" => {
-                // Read the field value
                 let mut value = Vec::new();
                 while let Some(chunk) = field.next().await {
                     let data = chunk?;
@@ -39,7 +45,6 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
                 file_name = Some(String::from_utf8(value).unwrap_or_default());
             }
             "file_type" => {
-                // Read the field value
                 let mut value = Vec::new();
                 while let Some(chunk) = field.next().await {
                     let data = chunk?;
@@ -48,42 +53,53 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
                 file_type = Some(String::from_utf8(value).unwrap_or_default());
             }
             "file" => {
-                // Generate a unique filename
                 let unique_id = Uuid::new_v4();
-                let safe_file_name = file_name.clone().unwrap_or_else(|| format!("upload_{}", unique_id));
-                let filepath = format!("uploads/{}", sanitize_filename::sanitize(&safe_file_name));
+                safe_file_name = Some(format!("{}", unique_id));
+                let mut value = Vec::new();
+                let mut total_size: usize = 0;
 
-                // Open a file to write the uploaded data
-                let mut f = OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .truncate(true)
-                    .open(&filepath)?;
-
-                // Process the file field
                 while let Some(chunk) = field.next().await {
                     let data = chunk?;
                     total_size += data.len();
 
-                    // Check file size limit
                     if total_size > MAX_SIZE {
-                        // Remove the partially uploaded file
-                        std::fs::remove_file(&filepath)?;
-                        return Ok(HttpResponse::BadRequest().body("File size exceeds 1GB limit"));
+                        return Ok(HttpResponse::PayloadTooLarge().body("File size exceeds 1GB"));
                     }
 
-                    // Write data to file
-                    f.write_all(&data)?;
+                    value.extend_from_slice(&data);
+                }
+
+                let bucket_result = bucket
+                    .put_object(safe_file_name.clone().unwrap(), &value)
+                    .await;
+                match bucket_result {
+                    Ok(result) => {
+                        if result.status_code() != 200 {
+                            return Ok(
+                                HttpResponse::InternalServerError().body("File upload errored")
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        println!("{}", e.to_string());
+                        return Ok(HttpResponse::InternalServerError().body("File upload errored"));
+                    }
                 }
             }
             _ => {
-                // Handle unexpected fields if necessary
+                return Ok(HttpResponse::ExpectationFailed().body("Too many form fields"));
             }
         }
+        println!("4.3")
     }
 
-    // Check if required fields are present
     if file_name.is_none() || file_type.is_none() {
+        let _ = bucket.delete_object(safe_file_name.unwrap()).await;
+
+        return Ok(HttpResponse::BadRequest().body("Missing form fields"));
+    }
+
+    if safe_file_name.is_none() {
         return Ok(HttpResponse::BadRequest().body("Missing form fields"));
     }
 
@@ -92,12 +108,18 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Server running at :8080");
-    HttpServer::new(|| {
+    dotenvy::dotenv().ok();
+
+    let conn_spec = std::env::var("DATABASE_URL").expect("DATABASE_URL should be set");
+    let manager = r2d2::ConnectionManager::<PgConnection>::new(conn_spec);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("database URL should be valid path to SQLite DB file");
+
+    HttpServer::new(move || {
         App::new()
-            // Register the upload route first
+            .app_data(web::Data::new(pool.clone()))
             .service(upload)
-            // Serve static files from the "frontend" directory
             .service(
                 Files::new("/", "./../frontend")
                     .index_file("index.html")
