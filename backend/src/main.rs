@@ -147,14 +147,14 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
             let _ = bucket.delete_object(format!("{}", unique_id)).await;
             return Ok(HttpResponse::BadRequest().body("Failed saving file"));
         }
+
+        return Ok(HttpResponse::Ok().body(format!("{}File uploaded successfully", unique_id)));
     } else {
         let _ = bucket
             .delete_object(format!("{}", unique_id.unwrap()))
             .await;
         return Ok(HttpResponse::BadRequest().body("Missing form fields"));
     }
-
-    Ok(HttpResponse::Ok().body("File uploaded successfully"))
 }
 
 #[actix_web::main]
