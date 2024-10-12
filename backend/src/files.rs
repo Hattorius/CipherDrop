@@ -10,12 +10,20 @@ pub async fn create_file(
     unique_id: Uuid,
     file_name: String,
     file_type: String,
-    lifetime: i64
+    lifetime: i64,
 ) -> Result<(), ()> {
     if let Some(mut conn) = pool.get().await.ok() {
         let available_till = Utc::now().timestamp() + lifetime;
 
-        return add_file_record(&mut conn, file, unique_id, file_name, file_type, available_till).await;
+        return add_file_record(
+            &mut conn,
+            file,
+            unique_id,
+            file_name,
+            file_type,
+            available_till,
+        )
+        .await;
     }
 
     Err(())

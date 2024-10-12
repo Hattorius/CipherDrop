@@ -24,7 +24,7 @@ pub struct NewFile<'a> {
     pub file_type: &'a str,
     pub key: &'a str,
     pub nonce: &'a str,
-    pub available_till: NaiveDateTime
+    pub available_till: NaiveDateTime,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable)]

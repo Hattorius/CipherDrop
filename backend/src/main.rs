@@ -3,17 +3,17 @@ use actix_multipart::Multipart;
 use actix_web::{post, web, App, Error, HttpResponse, HttpServer};
 use crypt::encrypt;
 use deadpool::managed::Pool;
+use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use files::create_file;
 use futures_util::StreamExt;
 use uuid::Uuid;
-use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 
 mod actions;
+mod crypt;
+mod files;
 mod models;
 mod s3;
 mod schema;
-mod crypt;
-mod files;
 
 type DbPool = deadpool::managed::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 const MAX_SIZE: usize = 1_073_741_824; // 1GB in bytes
@@ -68,7 +68,7 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                     "1d" => Some(86400),
                     "7d" => Some(86400 * 7),
                     "28d" => Some(86400 * 28),
-                    _ => None
+                    _ => None,
                 };
             }
             "file" => {
@@ -90,7 +90,9 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
 
                 let temp_encrypted_file = match encrypt(value) {
                     Some(bytes) => bytes,
-                    None => return Ok(HttpResponse::ServiceUnavailable().body("Failed encrypting file"))
+                    None => {
+                        return Ok(HttpResponse::ServiceUnavailable().body("Failed encrypting file"))
+                    }
                 };
 
                 let bucket_result = bucket
@@ -119,7 +121,6 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
         }
     }
 
-
     if unique_id.is_none() {
         return Ok(HttpResponse::BadRequest().body("Missing form fields"));
     }
@@ -129,16 +130,27 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
         Some(file_type),
         Some(encrypted_file),
         Some(unique_id),
-        Some(lifetime)
-    ) = (file_name, file_type, encrypted_file, unique_id, lifetime) {
-        let result = create_file(&pool, encrypted_file, unique_id, file_name, file_type, lifetime).await;
+        Some(lifetime),
+    ) = (file_name, file_type, encrypted_file, unique_id, lifetime)
+    {
+        let result = create_file(
+            &pool,
+            encrypted_file,
+            unique_id,
+            file_name,
+            file_type,
+            lifetime,
+        )
+        .await;
 
         if result.is_err() {
             let _ = bucket.delete_object(format!("{}", unique_id)).await;
             return Ok(HttpResponse::BadRequest().body("Failed saving file"));
         }
     } else {
-        let _ = bucket.delete_object(format!("{}", unique_id.unwrap())).await;
+        let _ = bucket
+            .delete_object(format!("{}", unique_id.unwrap()))
+            .await;
         return Ok(HttpResponse::BadRequest().body("Missing form fields"));
     }
 
@@ -151,7 +163,9 @@ async fn main() -> std::io::Result<()> {
 
     let conn_spec = std::env::var("DATABASE_URL").expect("DATABASE_URL should be set");
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(conn_spec);
-    let pool: DbPool = Pool::builder(config).build().expect("Failed creating database pool");
+    let pool: DbPool = Pool::builder(config)
+        .build()
+        .expect("Failed creating database pool");
 
     HttpServer::new(move || {
         App::new()

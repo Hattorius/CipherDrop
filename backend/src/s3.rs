@@ -7,7 +7,7 @@ pub async fn get_s3_bucket_info(pool: &web::Data<DbPool>) -> Option<Box<Bucket>>
     let bucket_info = if let Some(mut conn) = pool.get().await.ok() {
         match get_s3_bucket(&mut conn).await {
             Ok(maybe_bucket) => maybe_bucket,
-            Err(_) => None
+            Err(_) => None,
         }
     } else {
         None
