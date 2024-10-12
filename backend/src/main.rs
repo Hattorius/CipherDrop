@@ -6,6 +6,7 @@ use deadpool::managed::Pool;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use files::{create_file, get_file};
 use futures_util::StreamExt;
+use serde::Serialize;
 use uuid::Uuid;
 
 mod actions;
@@ -18,6 +19,25 @@ mod schema;
 type DbPool = deadpool::managed::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 const MAX_SIZE: usize = 1_073_741_824; // 1GB in bytes
 
+#[derive(Serialize)]
+struct HttpApiResponse {
+    success: bool,
+    message: String,
+}
+
+#[derive(Serialize)]
+struct HttpFileApiResponse {
+    success: bool,
+    file_name: String,
+    available_till: i64,
+}
+
+#[derive(Serialize)]
+struct HttpFileUploadApiResponse {
+    success: bool,
+    uuid: String,
+}
+
 #[post("/api/upload")]
 async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut file_name = None;
@@ -28,7 +48,12 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
 
     let bucket = match s3::get_s3_bucket_info(&pool).await {
         Some(bucket) => bucket,
-        None => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't receive storage")),
+        None => {
+            return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
+                success: false,
+                message: "Couldn't receive storage".to_string(),
+            }))
+        }
     };
 
     while let Some(item) = payload.next().await {
@@ -82,7 +107,10 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                     total_size += data.len();
 
                     if total_size > MAX_SIZE {
-                        return Ok(HttpResponse::PayloadTooLarge().body("File size exceeds 1GB"));
+                        return Ok(HttpResponse::PayloadTooLarge().json(HttpApiResponse {
+                            success: false,
+                            message: "File size exceeds 1GB".to_string(),
+                        }));
                     }
 
                     value.extend_from_slice(&data);
@@ -91,7 +119,10 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                 let temp_encrypted_file = match encrypt(value) {
                     Some(bytes) => bytes,
                     None => {
-                        return Ok(HttpResponse::ServiceUnavailable().body("Failed encrypting file"))
+                        return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
+                            success: false,
+                            message: "Failed encrypting file".to_string(),
+                        }))
                     }
                 };
 
@@ -101,14 +132,18 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                 match bucket_result {
                     Ok(result) => {
                         if result.status_code() != 200 {
-                            return Ok(
-                                HttpResponse::InternalServerError().body("File upload errored")
-                            );
+                            return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
+                                success: false,
+                                message: "File upload errored".to_string(),
+                            }));
                         }
                     }
                     Err(e) => {
                         println!("{}", e.to_string());
-                        return Ok(HttpResponse::InternalServerError().body("File upload errored"));
+                        return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
+                            success: false,
+                            message: "File upload errored".to_string(),
+                        }));
                     }
                 }
 
@@ -116,13 +151,19 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                 unique_id = Some(temp_unique_id);
             }
             _ => {
-                return Ok(HttpResponse::ExpectationFailed().body("Too many form fields"));
+                return Ok(HttpResponse::ExpectationFailed().json(HttpApiResponse {
+                    success: false,
+                    message: "Too many form fields".to_string(),
+                }));
             }
         }
     }
 
     if unique_id.is_none() {
-        return Ok(HttpResponse::BadRequest().body("Missing form fields"));
+        return Ok(HttpResponse::BadRequest().json(HttpApiResponse {
+            success: false,
+            message: "Missing form fields".to_string(),
+        }));
     }
 
     if let (
@@ -145,45 +186,102 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
 
         if result.is_err() {
             let _ = bucket.delete_object(format!("{}", unique_id)).await;
-            return Ok(HttpResponse::BadRequest().body("Failed saving file"));
+            return Ok(HttpResponse::BadRequest().json(HttpApiResponse {
+                success: false,
+                message: "Failed saving file".to_string(),
+            }));
         }
 
-        return Ok(HttpResponse::Ok().body(format!("{}File uploaded successfully", unique_id)));
+        return Ok(HttpResponse::Ok().json(HttpFileUploadApiResponse {
+            success: true,
+            uuid: unique_id.to_string(),
+        }));
     } else {
         let _ = bucket
             .delete_object(format!("{}", unique_id.unwrap()))
             .await;
-        return Ok(HttpResponse::BadRequest().body("Missing form fields"));
+        return Ok(HttpResponse::BadRequest().json(HttpApiResponse {
+            success: false,
+            message: "Missing form fields".to_string(),
+        }));
     }
 }
 
-#[get("/api/file/download/{file_uuid}")]
+#[get("/api/file/{file_uuid}")]
+async fn file_info(
+    pool: web::Data<DbPool>,
+    path: web::Path<(String,)>,
+) -> Result<HttpResponse, Error> {
+    let file_uuid = match uuid::Uuid::try_parse(path.into_inner().0.as_str()) {
+        Ok(uuid) => uuid,
+        _ => {
+            return Ok(HttpResponse::ExpectationFailed().json(HttpApiResponse {
+                success: false,
+                message: "Invalid UUID".to_string(),
+            }))
+        }
+    };
+
+    let file = match get_file(&pool, file_uuid).await {
+        Ok(file) => file,
+        _ => {
+            return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
+                success: false,
+                message: "Internal error, please try again later".to_string(),
+            }))
+        }
+    };
+
+    Ok(HttpResponse::Ok().json(HttpFileApiResponse {
+        success: true,
+        file_name: file.file_name,
+        available_till: file.available_till.and_utc().timestamp(),
+    }))
+}
+
+#[get("/api/file/{file_uuid}/download")]
 async fn download_file(
     pool: web::Data<DbPool>,
     path: web::Path<(String,)>,
 ) -> Result<HttpResponse, Error> {
     let file_uuid = match uuid::Uuid::try_parse(path.into_inner().0.as_str()) {
         Ok(uuid) => uuid,
-        _ => return Ok(HttpResponse::ExpectationFailed().body("URL passed is no uuid")),
+        _ => {
+            return Ok(HttpResponse::ExpectationFailed().json(HttpApiResponse {
+                success: false,
+                message: "Invalid UUID".to_string(),
+            }))
+        }
     };
 
     let bucket = match s3::get_s3_bucket_info(&pool).await {
         Some(bucket) => bucket,
-        None => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't receive storage")),
+        None => {
+            return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
+                success: false,
+                message: "Couldn't receive storage".to_string(),
+            }))
+        }
     };
 
     let file = match get_file(&pool, file_uuid).await {
         Ok(file) => file,
         _ => {
-            return Ok(
-                HttpResponse::InternalServerError().body("Internal error, please try again later")
-            )
+            return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
+                success: false,
+                message: "Internal error, please try again later".to_string(),
+            }))
         }
     };
 
     let bytes = match bucket.get_object(format!("{}", file_uuid)).await {
         Ok(file) => file,
-        _ => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't find file")),
+        _ => {
+            return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
+                success: false,
+                message: "Couldn't find file".to_string(),
+            }))
+        }
     }
     .to_vec();
 
@@ -195,7 +293,12 @@ async fn download_file(
 
     let file = match decrypt(encrypted_file) {
         Some(file) => file,
-        _ => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't decrypt file")),
+        _ => {
+            return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
+                success: false,
+                message: "Couldn't decrypt file".to_string(),
+            }))
+        }
     };
 
     return Ok(HttpResponse::Ok().body(file));
@@ -215,6 +318,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .service(upload)
+            .service(file_info)
             .service(download_file)
             .service(
                 Files::new("/", "./../frontend")
