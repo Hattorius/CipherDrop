@@ -3,19 +3,14 @@ use s3::Bucket;
 
 use crate::{actions::get_s3_bucket, DbPool};
 
-pub async fn get_s3_bucket_info(pool: web::Data<DbPool>) -> Option<Box<Bucket>> {
-    let bucket_info = match web::block(move || {
-        pool.get()
-            .ok()
-            .and_then(|mut conn| match get_s3_bucket(&mut conn) {
-                Ok(maybe_bucket) => maybe_bucket,
-                Err(_) => None,
-            })
-    })
-    .await
-    {
-        Ok(maybe_bucket) => maybe_bucket,
-        Err(_) => None,
+pub async fn get_s3_bucket_info(pool: &web::Data<DbPool>) -> Option<Box<Bucket>> {
+    let bucket_info = if let Some(mut conn) = pool.get().await.ok() {
+        match get_s3_bucket(&mut conn).await {
+            Ok(maybe_bucket) => maybe_bucket,
+            Err(_) => None
+        }
+    } else {
+        None
     };
 
     let bucket_info = match bucket_info {

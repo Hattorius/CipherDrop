@@ -1,32 +1,37 @@
 use actix_files::Files;
 use actix_multipart::Multipart;
 use actix_web::{post, web, App, Error, HttpResponse, HttpServer};
-use diesel::{r2d2, PgConnection};
+use crypt::encrypt;
+use deadpool::managed::Pool;
+use files::create_file;
 use futures_util::StreamExt;
 use uuid::Uuid;
+use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 
 mod actions;
 mod models;
 mod s3;
 mod schema;
+mod crypt;
+mod files;
 
-type DbPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
+type DbPool = deadpool::managed::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 const MAX_SIZE: usize = 1_073_741_824; // 1GB in bytes
 
 #[post("/upload")]
 async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut file_name = None;
     let mut file_type = None;
-    let mut safe_file_name = None;
+    let mut unique_id = None;
+    let mut encrypted_file = None;
+    let mut lifetime: Option<i64> = None;
 
-    let bucket = match s3::get_s3_bucket_info(pool).await {
+    let bucket = match s3::get_s3_bucket_info(&pool).await {
         Some(bucket) => bucket,
         None => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't receive storage")),
     };
 
-    println!("4");
     while let Some(item) = payload.next().await {
-        println!("4.1");
         let mut field = item?;
         let content_disposition = field.content_disposition();
 
@@ -34,7 +39,6 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
             .and_then(|cd| cd.get_name())
             .unwrap_or("");
 
-        println!("4.2 {}", name);
         match name {
             "file_name" => {
                 let mut value = Vec::new();
@@ -52,9 +56,24 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                 }
                 file_type = Some(String::from_utf8(value).unwrap_or_default());
             }
+            "lifetime" => {
+                let mut value = Vec::new();
+                while let Some(chunk) = field.next().await {
+                    let data = chunk?;
+                    value.extend_from_slice(&data);
+                }
+
+                let lifetime_str = String::from_utf8(value).unwrap_or_default();
+                lifetime = match lifetime_str.as_str() {
+                    "1d" => Some(86400),
+                    "7d" => Some(86400 * 7),
+                    "28d" => Some(86400 * 28),
+                    _ => None
+                };
+            }
             "file" => {
-                let unique_id = Uuid::new_v4();
-                safe_file_name = Some(format!("{}", unique_id));
+                let temp_unique_id = Uuid::new_v4();
+                let safe_file_name = Some(format!("{}", temp_unique_id));
                 let mut value = Vec::new();
                 let mut total_size: usize = 0;
 
@@ -69,8 +88,13 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                     value.extend_from_slice(&data);
                 }
 
+                let temp_encrypted_file = match encrypt(value) {
+                    Some(bytes) => bytes,
+                    None => return Ok(HttpResponse::ServiceUnavailable().body("Failed encrypting file"))
+                };
+
                 let bucket_result = bucket
-                    .put_object(safe_file_name.clone().unwrap(), &value)
+                    .put_object(safe_file_name.clone().unwrap(), &temp_encrypted_file.result)
                     .await;
                 match bucket_result {
                     Ok(result) => {
@@ -85,21 +109,36 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
                         return Ok(HttpResponse::InternalServerError().body("File upload errored"));
                     }
                 }
+
+                encrypted_file = Some(temp_encrypted_file);
+                unique_id = Some(temp_unique_id);
             }
             _ => {
                 return Ok(HttpResponse::ExpectationFailed().body("Too many form fields"));
             }
         }
-        println!("4.3")
     }
 
-    if file_name.is_none() || file_type.is_none() {
-        let _ = bucket.delete_object(safe_file_name.unwrap()).await;
 
+    if unique_id.is_none() {
         return Ok(HttpResponse::BadRequest().body("Missing form fields"));
     }
 
-    if safe_file_name.is_none() {
+    if let (
+        Some(file_name),
+        Some(file_type),
+        Some(encrypted_file),
+        Some(unique_id),
+        Some(lifetime)
+    ) = (file_name, file_type, encrypted_file, unique_id, lifetime) {
+        let result = create_file(&pool, encrypted_file, unique_id, file_name, file_type, lifetime).await;
+
+        if result.is_err() {
+            let _ = bucket.delete_object(format!("{}", unique_id)).await;
+            return Ok(HttpResponse::BadRequest().body("Failed saving file"));
+        }
+    } else {
+        let _ = bucket.delete_object(format!("{}", unique_id.unwrap())).await;
         return Ok(HttpResponse::BadRequest().body("Missing form fields"));
     }
 
@@ -111,10 +150,8 @@ async fn main() -> std::io::Result<()> {
     dotenvy::dotenv().ok();
 
     let conn_spec = std::env::var("DATABASE_URL").expect("DATABASE_URL should be set");
-    let manager = r2d2::ConnectionManager::<PgConnection>::new(conn_spec);
-    let pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("database URL should be valid path to SQLite DB file");
+    let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(conn_spec);
+    let pool: DbPool = Pool::builder(config).build().expect("Failed creating database pool");
 
     HttpServer::new(move || {
         App::new()
