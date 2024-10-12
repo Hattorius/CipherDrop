@@ -2,7 +2,7 @@ use aes_gcm::{
     aead::{Aead, KeyInit, OsRng},
     Aes256Gcm, Nonce,
 };
-use base64::{decode, encode};
+use base64::{engine::general_purpose, Engine};
 use rand::RngCore;
 
 pub struct Encrypted {
@@ -13,12 +13,12 @@ pub struct Encrypted {
 
 pub fn encrypt(value: Vec<u8>) -> Option<Encrypted> {
     let key = Aes256Gcm::generate_key(&mut OsRng);
-    let key_base64 = encode(key.as_slice());
+    let key_base64 = general_purpose::STANDARD.encode(key.as_slice());
 
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
-    let nonce_base64 = encode(nonce_bytes);
+    let nonce_base64 = general_purpose::STANDARD.encode(nonce_bytes);
 
     let cipher = Aes256Gcm::new(&key);
     let ciphertext = match cipher.encrypt(nonce, value.as_ref()) {
@@ -34,8 +34,12 @@ pub fn encrypt(value: Vec<u8>) -> Option<Encrypted> {
 }
 
 pub fn decrypt(en: Encrypted) -> Option<Vec<u8>> {
-    let decoded_key = decode(&en.key).expect("Failed decoding base64 key"); // This is ok since the key never leaves our eco
-    let decoded_nonce = decode(&en.nonce).expect("Failed decoding base64 nonce"); // This is ok since the key never leaves our eco
+    let decoded_key = general_purpose::STANDARD
+        .decode(&en.key)
+        .expect("Failed decoding base64 key"); // This is ok since the key never leaves our eco
+    let decoded_nonce = general_purpose::STANDARD
+        .decode(&en.nonce)
+        .expect("Failed decoding base64 nonce"); // This is ok since the key never leaves our eco
 
     let key_for_decryption = aes_gcm::Key::<Aes256Gcm>::from_slice(&decoded_key);
     let nonce = Nonce::from_slice(&decoded_nonce);
