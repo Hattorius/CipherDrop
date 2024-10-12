@@ -14,6 +14,7 @@ diesel::table! {
         nonce -> Varchar,
         available_till -> Timestamp,
         date_created -> Timestamp,
+        s3_bucket_id -> Int4,
     }
 }
 
@@ -32,5 +33,7 @@ diesel::table! {
         secret_key -> Varchar,
     }
 }
+
+diesel::joinable!(files -> s3_buckets (s3_bucket_id));
 
 diesel::allow_tables_to_appear_in_same_query!(files, s3_buckets,);

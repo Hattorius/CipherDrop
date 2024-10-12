@@ -20,6 +20,16 @@ pub async fn get_s3_bucket(
     Ok(s3_buckets::table.first::<models::S3Bucket>(conn).await.ok())
 }
 
+pub async fn get_s3_bucket_by_id(
+    conn: &mut AsyncPgConnection,
+    id: i32,
+) -> Result<models::S3Bucket, DbError> {
+    Ok(s3_buckets::table
+        .filter(s3_buckets::id.eq(id))
+        .first::<models::S3Bucket>(conn)
+        .await?)
+}
+
 pub async fn add_file_record(
     conn: &mut AsyncPgConnection,
     encrypted_file: Encrypted,
@@ -27,6 +37,7 @@ pub async fn add_file_record(
     file_name: String,
     file_type: String,
     lifetime: i64,
+    s3_bucket_id: i32,
 ) -> Result<(), ()> {
     let new_file = NewFile {
         file: &unique_id,
@@ -35,6 +46,7 @@ pub async fn add_file_record(
         key: &encrypted_file.key,
         nonce: &encrypted_file.nonce,
         available_till: NaiveDateTime::from_timestamp(lifetime.into(), 0),
+        s3_bucket_id: &s3_bucket_id,
     };
 
     let result = diesel::insert_into(files::table)

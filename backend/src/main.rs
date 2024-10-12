@@ -56,6 +56,9 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
         }
     };
 
+    let bucket_id = bucket.id;
+    let bucket = bucket.bucket;
+
     while let Some(item) = payload.next().await {
         let mut field = item?;
         let content_disposition = field.content_disposition();
@@ -181,6 +184,7 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
             file_name,
             file_type,
             lifetime,
+            bucket_id,
         )
         .await;
 
@@ -254,22 +258,22 @@ async fn download_file(
         }
     };
 
-    let bucket = match s3::get_s3_bucket_info(&pool).await {
-        Some(bucket) => bucket,
-        None => {
-            return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
-                success: false,
-                message: "Couldn't receive storage".to_string(),
-            }))
-        }
-    };
-
     let file = match get_file(&pool, file_uuid).await {
         Ok(file) => file,
         _ => {
             return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
                 success: false,
                 message: "Internal error, please try again later".to_string(),
+            }))
+        }
+    };
+
+    let bucket = match s3::get_s3_specific_bucket(&pool, file.s3_bucket_id).await {
+        Some(bucket) => bucket,
+        None => {
+            return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
+                success: false,
+                message: "Couldn't receive storage".to_string(),
             }))
         }
     };

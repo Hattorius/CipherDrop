@@ -25,6 +25,7 @@ pub struct NewFile<'a> {
     pub key: &'a str,
     pub nonce: &'a str,
     pub available_till: NaiveDateTime,
+    pub s3_bucket_id: &'a i32,
 }
 
 #[derive(Debug, Clone, Queryable)]
@@ -38,4 +39,5 @@ pub struct File {
     pub nonce: String,
     pub available_till: chrono::NaiveDateTime,
     pub date_created: chrono::NaiveDateTime,
+    pub s3_bucket_id: i32,
 }

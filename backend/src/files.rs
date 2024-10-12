@@ -15,6 +15,7 @@ pub async fn create_file(
     file_name: String,
     file_type: String,
     lifetime: i64,
+    s3_bucket_id: i32,
 ) -> Result<(), ()> {
     if let Some(mut conn) = pool.get().await.ok() {
         let available_till = Utc::now().timestamp() + lifetime;
@@ -26,6 +27,7 @@ pub async fn create_file(
             file_name,
             file_type,
             available_till,
+            s3_bucket_id,
         )
         .await;
     }
