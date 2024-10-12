@@ -2,7 +2,11 @@ use actix_web::web;
 use chrono::Utc;
 use uuid::Uuid;
 
-use crate::{actions::add_file_record, crypt::Encrypted, DbPool};
+use crate::{
+    actions::{add_file_record, get_file_record},
+    crypt::Encrypted,
+    models, DbPool,
+};
 
 pub async fn create_file(
     pool: &web::Data<DbPool>,
@@ -24,6 +28,17 @@ pub async fn create_file(
             available_till,
         )
         .await;
+    }
+
+    Err(())
+}
+
+pub async fn get_file(pool: &web::Data<DbPool>, file_uuid: Uuid) -> Result<models::File, ()> {
+    if let Some(mut conn) = pool.get().await.ok() {
+        return match get_file_record(&mut conn, file_uuid).await {
+            Ok(file) => Ok(file),
+            _ => Err(()),
+        };
     }
 
     Err(())

@@ -27,13 +27,15 @@ pub struct NewFile<'a> {
     pub available_till: NaiveDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable)]
+#[derive(Debug, Clone, Queryable)]
 #[diesel(table_name = files)]
 pub struct File {
     pub id: i32,
-    pub file: String,
-    pub region: String,
-    pub endpoint: String,
-    pub access_key: String,
-    pub secret_key: String,
+    pub file: uuid::Uuid,
+    pub file_name: String,
+    pub file_type: String,
+    pub key: String,
+    pub nonce: String,
+    pub available_till: chrono::NaiveDateTime,
+    pub date_created: chrono::NaiveDateTime,
 }

@@ -1,10 +1,10 @@
 use actix_files::Files;
 use actix_multipart::Multipart;
-use actix_web::{post, web, App, Error, HttpResponse, HttpServer};
-use crypt::encrypt;
+use actix_web::{get, post, web, App, Error, HttpResponse, HttpServer};
+use crypt::{decrypt, encrypt, Encrypted};
 use deadpool::managed::Pool;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
-use files::create_file;
+use files::{create_file, get_file};
 use futures_util::StreamExt;
 use uuid::Uuid;
 
@@ -18,7 +18,7 @@ mod schema;
 type DbPool = deadpool::managed::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 const MAX_SIZE: usize = 1_073_741_824; // 1GB in bytes
 
-#[post("/upload")]
+#[post("/api/upload")]
 async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut file_name = None;
     let mut file_type = None;
@@ -157,6 +157,50 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
     }
 }
 
+#[get("/api/file/download/{file_uuid}")]
+async fn download_file(
+    pool: web::Data<DbPool>,
+    path: web::Path<(String,)>,
+) -> Result<HttpResponse, Error> {
+    let file_uuid = match uuid::Uuid::try_parse(path.into_inner().0.as_str()) {
+        Ok(uuid) => uuid,
+        _ => return Ok(HttpResponse::ExpectationFailed().body("URL passed is no uuid")),
+    };
+
+    let bucket = match s3::get_s3_bucket_info(&pool).await {
+        Some(bucket) => bucket,
+        None => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't receive storage")),
+    };
+
+    let file = match get_file(&pool, file_uuid).await {
+        Ok(file) => file,
+        _ => {
+            return Ok(
+                HttpResponse::InternalServerError().body("Internal error, please try again later")
+            )
+        }
+    };
+
+    let bytes = match bucket.get_object(format!("{}", file_uuid)).await {
+        Ok(file) => file,
+        _ => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't find file")),
+    }
+    .to_vec();
+
+    let encrypted_file = Encrypted {
+        key: file.key,
+        nonce: file.nonce,
+        result: bytes,
+    };
+
+    let file = match decrypt(encrypted_file) {
+        Some(file) => file,
+        _ => return Ok(HttpResponse::ServiceUnavailable().body("Couldn't decrypt file")),
+    };
+
+    return Ok(HttpResponse::Ok().body(file));
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenvy::dotenv().ok();
@@ -171,6 +215,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .service(upload)
+            .service(download_file)
             .service(
                 Files::new("/", "./../frontend")
                     .index_file("index.html")
