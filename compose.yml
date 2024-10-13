@@ -8,10 +8,25 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: toor
       POSTGRES_DB: db
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: cipherdrop
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://root:toor@postgres/db
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "
+      until diesel migration run; do
+        echo 'Waiting for database migration...'
+      done &&
+      ./backend
+      "
 
 volumes:
   postgres_data:
