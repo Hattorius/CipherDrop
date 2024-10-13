@@ -2,7 +2,9 @@ use actix_files::Files;
 use actix_web::{web, App, HttpServer};
 use deadpool::managed::Pool;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
-use routes::{download_file::download_file, file_info::file_info, upload::upload};
+use routes::{
+    download_file::download_file, file_html::file_html, file_info::file_info, upload::upload,
+};
 
 mod actions;
 mod crypt;
@@ -30,6 +32,7 @@ async fn main() -> std::io::Result<()> {
             .service(upload)
             .service(file_info)
             .service(download_file)
+            .service(file_html)
             .service(
                 Files::new("/", "./../frontend")
                     .index_file("index.html")
