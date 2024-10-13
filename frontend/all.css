@@ -37,3 +37,43 @@ div.container {
         width: 1170px;
     }
 }
+
+h1 {
+    text-align: center;
+}
+
+h2 {
+    text-align: center;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+p {
+    text-align: center;
+}
+
+p.features {
+    display: flex;
+    margin: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+}
+
+div.loader {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.01);
+    border-radius: 2px;
+}
+
+div.loader > div.inner {
+    background: #047d24;
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+}
+
+.hidden {
+    display: none;
+}

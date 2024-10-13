@@ -2,6 +2,7 @@ const dropZone = document.querySelector('div.drop');
 const button = document.querySelector('button');
 const fileInput = document.querySelector('input');
 const uploads = document.querySelector('.uploads');
+const select = document.querySelector('select');
 
 const uploadingTemplate = document.querySelector('.uploading.hidden').cloneNode(true);
 const successTemplate = document.querySelector('.success.hidden').cloneNode(true);
@@ -33,7 +34,7 @@ class FileUpload {
         uploads.appendChild(this.templateHolder);
     }
 
-    async start() {
+    async start(lifetime) {
         if (this.file.size > 1073741824) {
             return this.error('File size exceeds 1GB limit.')
         }
@@ -44,8 +45,39 @@ class FileUpload {
             return this.error('File size exceeds 1GB limit.')
         }
 
-        console.log(file.data.length);
-        console.log(file);
+        const fileBlob = new Blob([file.data], { type: 'application/octet-stream' });
+
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+
+        xhr.open('POST', '/api/upload', true);
+        formData.append('file_name', this.fileName);
+        formData.append('file_type', file.mimeType);
+        formData.append('lifetime', lifetime);
+        formData.append('file', fileBlob, 'file');
+
+        xhr.upload.onprogress = event => {
+            if (event.lengthComputable) {
+                let percentComplete = (event.loaded / event.total) * 100;
+                this.progress(percentComplete);
+            }
+        };
+
+        xhr.onload = () => {
+            const body = JSON.parse(xhr.responseText);
+
+            if (body.success) {
+                this.success(`${window.location.protocol}//${window.location.hostname}/file/${body.uuid}?v=${file.iv}&k=${file.key}`);
+            } else {
+                this.error(body.message);
+            }
+        }
+
+        xhr.onerror = () => {
+            this.error('An error occured while uploading file.');
+        }
+
+        xhr.send(formData);
     }
 
     progress(percent = 0) {
@@ -81,7 +113,8 @@ class FileUpload {
 
 const handleFile = async file => {
     const fileUploader = new FileUpload(file);
-    fileUploader.start();
+
+    fileUploader.start(select.value);
 }
 
 const handleFiles = files => { // FileList

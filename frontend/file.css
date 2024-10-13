@@ -1,0 +1,22 @@
+
+.file h3 {
+    font-weight: 500;
+    margin-top: 0;
+}
+
+button {
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.02);
+    border: rgba(255, 255, 255, 0.05) 2px solid;
+    color: #fff;
+    cursor: pointer;
+    height: 50px;
+    width: 200px;
+    font-size: 16px;
+}
+
+div.downloader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
