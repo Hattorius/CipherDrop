@@ -5,13 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/all.css">
     <link rel="stylesheet" href="/file.css">
-    <title>CipherDrop</title>
+
+    {% if success %}
+    <title>
+        CipherDrop - Download {{file_name}}
+    </title>
+    {% else %}
+    <title>
+        CipherDrop - Not found
+    </title>
+    {% endif %}
 </head>
 <body>
     <div class="container">
         <div class="wrapper">
-            <h1>CipherDrop</h1>
-            <h2>Anonymous File Upload</h2>
+            <h1>
+                <a href="/">
+                    CipherDrop
+                </a>
+            </h1>
+
+            <h2>
+                <a href="/">
+                    Anonymous File Upload
+                </a>
+            </h2>
             <p class="features">
                 <span>
                     No logs
@@ -31,28 +49,55 @@
             </p>
         </div>
 
-        <div class="wrapper file">
-            <small>
-                You're about to download
-            </small>
-            <h3>
-                some_file.png
-            </h3>
+        {% if success %}
+            <div class="wrapper file">
+                <small>
+                    You're about to download
+                </small>
+                <h3>
+                    {{file_name}}
+                </h3>
 
-            <div class="downloader">
-                <button>
-                    Download
-                </button>
+                <div class="downloader">
+                    <button>
+                        Download
+                    </button>
 
-                <div class="loader hidden">
-                    <div class="inner"></div>
+                    <div class="loader hidden">
+                        <div class="inner"></div>
+                    </div>
+
+                    <p class="error hidden">
+                        Wrong!
+                    </p>
                 </div>
-            </div>
 
-            <small>
-                File available for 7 days
-            </small>
-        </div>
+                <small class="availability">
+                    File available for the next 7 days
+                </small>
+
+                <input type="hidden" id="uuid" value="{{uuid}}">
+                <input type="hidden" id="available_till" value="{{available_till}}">
+                <input type="hidden" id="iv" value="{{iv}}">
+                <input type="hidden" id="key" value="{{key}}">
+                <input type="hidden" id="mime_type" value="{{mime_type}}">
+                <input type="hidden" id="file_name" value="{{file_name}}">
+            </div>
+        {% else %}
+            <div class="wrapper">
+                <h3 class="nf">
+                    Could not find file
+                </h3>
+
+                <small>
+                    The file could've expired or just never existed in the first place.
+                </small>
+            </div>
+        {% endif %}
     </div>
+
+    {% if success %}
+        <script src="/file.js"></script>
+    {% endif %}
 </body>
 </html>

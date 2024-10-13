@@ -72,8 +72,33 @@ div.loader > div.inner {
     height: 100%;
     width: 0;
     border-radius: 2px;
+    
+    -webkit-transition: width 350ms;
+    -moz-transition: width 350ms;
+    -o-transition: width 350ms;
+    transition: width 350ms;
 }
 
 .hidden {
     display: none;
+}
+
+a {
+    color: #fff;
+}
+
+a:link { 
+    text-decoration: none; 
+}
+
+a:visited { 
+    text-decoration: none; 
+}
+
+a:hover { 
+    text-decoration: none; 
+}
+
+a:active { 
+    text-decoration: none; 
 }

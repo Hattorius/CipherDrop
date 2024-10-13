@@ -20,3 +20,14 @@ div.downloader {
     align-items: center;
     gap: 8px;
 }
+
+h3.nf {
+    margin-bottom: 0;
+}
+
+p.error {
+    flex: 1;
+    text-align: right;
+    font-weight: 600;
+    color: #911111;
+}
