@@ -2,9 +2,8 @@ use actix_files::Files;
 use actix_web::{web, App, HttpServer};
 use deadpool::managed::Pool;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
-use routes::{
-    download_file::download_file, file_html::file_html, file_info::file_info, upload::upload,
-};
+use routes::{download_file::download_file, file_html::file_html, upload::upload};
+use tera::Tera;
 
 mod actions;
 mod crypt;
@@ -26,11 +25,13 @@ async fn main() -> std::io::Result<()> {
         .build()
         .expect("Failed creating database pool");
 
+    let tera = Tera::new("./../frontend/templates/**/*").unwrap();
+
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(tera.clone()))
             .service(upload)
-            .service(file_info)
             .service(download_file)
             .service(file_html)
             .service(

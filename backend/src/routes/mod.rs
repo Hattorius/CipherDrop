@@ -2,7 +2,6 @@ use serde::Serialize;
 
 pub mod download_file;
 pub mod file_html;
-pub mod file_info;
 pub mod upload;
 
 #[derive(Serialize)]
