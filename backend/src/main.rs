@@ -2,6 +2,7 @@ use actix_files::Files;
 use actix_web::{web, App, HttpServer};
 use deadpool::managed::Pool;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
+use lazy_static::lazy_static;
 use routes::{download_file::download_file, file_html::file_html, upload::upload};
 use tera::Tera;
 
@@ -15,6 +16,10 @@ mod schema;
 
 type DbPool = deadpool::managed::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 
+lazy_static! {
+    static ref TEMPLATES: Tera = Tera::new("./../frontend/templates/**/*.html").unwrap();
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenvy::dotenv().ok();
@@ -25,12 +30,10 @@ async fn main() -> std::io::Result<()> {
         .build()
         .expect("Failed creating database pool");
 
-    let tera = Tera::new("./../frontend/templates/**/*").unwrap();
-
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(tera.clone()))
+            .app_data(web::Data::new(TEMPLATES.clone()))
             .service(upload)
             .service(download_file)
             .service(file_html)

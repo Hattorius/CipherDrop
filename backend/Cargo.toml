@@ -17,6 +17,7 @@ diesel = { version = "2.2.4", features = ["chrono", "uuid"] }
 diesel-async = { version = "0.5.0", features = ["deadpool", "postgres"] }
 dotenvy = "0.15.7"
 futures-util = "0.3.31"
+lazy_static = "1.5.0"
 rand = "0.8.5"
 rust-s3 = "0.35.1"
 serde = "1.0.210"
