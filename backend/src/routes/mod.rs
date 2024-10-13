@@ -11,13 +11,6 @@ struct HttpApiResponse {
 }
 
 #[derive(Serialize)]
-struct HttpFileApiResponse {
-    success: bool,
-    file_name: String,
-    available_till: i64,
-}
-
-#[derive(Serialize)]
 struct HttpFileUploadApiResponse {
     success: bool,
     uuid: String,
