@@ -85,15 +85,20 @@ div.loader > div.inner {
 
 a {
     color: #fff;
-    text-decoration: #fff wavy underline;
+    text-underline-offset: 4px;
+    text-decoration: #fff underline;
 }
 
 a:link { 
-    text-decoration: none; 
+    text-decoration: none;
+    text-underline-offset: 4px;
+    text-decoration: #fff underline;
 }
 
 a:visited { 
-    text-decoration: none; 
+    text-decoration: none;
+    text-underline-offset: 4px;
+    text-decoration: #fff underline;
 }
 
 a:hover { 
