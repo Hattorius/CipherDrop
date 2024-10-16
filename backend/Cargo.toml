@@ -24,3 +24,8 @@ serde = "1.0.210"
 tera = "1.20.0"
 tokio-util = "0.7.12"
 uuid = { version = "1.10.0", features = ["v4"] }
+
+[profile.release]
+debug = false
+codegen-units = 1
+panic = "abort"

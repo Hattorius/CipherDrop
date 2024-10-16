@@ -1,0 +1,41 @@
+name: Deploy to cipherdrop.sh
+
+# on:
+#   release:
+#     types: [published]
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Set up SSH agent
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Run deployment
+      run: |
+        ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY user@your-server-ip << 'EOF'
+          cd /root/CipherDrop
+          git reset --hard
+          git pull
+
+          cd backend
+          diesel migration run
+
+          cd ..
+          docker compose build backend
+
+          docker compose down
+          docker compose up -d
+
+          docker system prune -f
+        EOF
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
