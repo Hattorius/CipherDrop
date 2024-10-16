@@ -21,7 +21,7 @@ jobs:
 
     - name: Run deployment
       run: |
-        ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY root@cipherdrop.io << 'EOF'
+        ssh -o StrictHostKeyChecking=no root@cipherdrop.io << 'EOF'
           cd /root/CipherDrop
           git reset --hard
           git pull
@@ -37,5 +37,3 @@ jobs:
 
           docker system prune -f
         EOF
-      env:
-        SSH_AUTH_SOCK: $SSH_AUTH_SOCK
