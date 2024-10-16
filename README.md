@@ -1,7 +1,10 @@
 # Cipher Drop
 
-Goal: Create an anonymous file hosting service.  
-Available on https://cipherdrop.sh/ and http://7li2aq2wefmr7ypllk36qyf2ueagvywurhvvmpafadmkgidmgyftetqd.onion/
+Goal: Create an anonymous file hosting service.
+
+Available at
+- https://cipherdrop.sh
+- http://7li2aq2wefmr7ypllk36qyf2ueagvywurhvvmpafadmkgidmgyftetqd.onion
 
 ## Features
 - Encrypt file on client
