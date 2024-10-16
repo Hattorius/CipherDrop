@@ -21,7 +21,7 @@ jobs:
 
     - name: Run deployment
       run: |
-        ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY user@your-server-ip << 'EOF'
+        ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY root@cipherdrop.io << 'EOF'
           cd /root/CipherDrop
           git reset --hard
           git pull
