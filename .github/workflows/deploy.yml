@@ -38,4 +38,4 @@ jobs:
           docker system prune -f
         EOF
       env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        SSH_AUTH_SOCK: $SSH_AUTH_SOCK
