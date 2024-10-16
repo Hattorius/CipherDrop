@@ -15,7 +15,7 @@ Make sure you have [docker](https://docs.docker.com/engine/install/) installed.
 ```
 docker compose up
 ```
-Yeah, that's really it.
+Yeah, that's really it. It should now pull the Postgresql image & build the webserver.
 
 ## Adding s3 buckets
 To add your s3 bucket to the database you'll need to attach to the postgres service in docker. First figure out what the postgres container name is:
@@ -48,7 +48,12 @@ Why the `NAME` also contains the region? No idea, it's just [how the package I u
 
 # Development setup
 
-Actually very simple, make sure to have postgres running (through a container or just really on your machine). Copy `env.example` into `.env` and change the `DATABASE_URL` value to your database connection string.
+This is actually pretty simple, you just have to make sure you have Docker [installed](https://docs.docker.com/desktop/) & running, and run the following command to start a Postgres instance:
+```shell
+docker compose -f compose-dev.yml up
+```
+
+After this you need to copy the [`env.example`](https://github.com/Hattorius/CipherDrop/blob/main/backend/.env) into `.env` in the `backend` folder and change the `DATABASE_URL` value to your database connection string. (which should be `postgres://root:toor@localhost/db`)
 
 Make sure to install the [Diesel](https://diesel.rs/guides/getting-started) cli. These are the commands I quickly copied over, but make sure to check if they're not outdated:
 ```shell
@@ -59,7 +64,7 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/diesel-rs/diesel/releas
 powershell -c "irm https://github.com/diesel-rs/diesel/releases/latest/download/diesel_cli-installer.ps1 | iex"
 ```  
 
-Run diesel migrations (for the database):
+Run the database migrations using diesel:
 ```shell
 diesel migration run
 ```  
@@ -68,3 +73,5 @@ Now finally start the server with hot reload:
 ```shell
 cargo watch -w src -w ../frontend -x run
 ```
+
+# Thank you for reading
