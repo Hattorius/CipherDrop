@@ -1,6 +1,7 @@
 # Cipher Drop
 
-Goal: Create an anonymous file hosting service.
+Goal: Create an anonymous file hosting service.  
+Available on https://cipherdrop.sh/ and http://7li2aq2wefmr7ypllk36qyf2ueagvywurhvvmpafadmkgidmgyftetqd.onion/
 
 ## Features
 - Encrypt file on client
@@ -15,7 +16,7 @@ Make sure you have [docker](https://docs.docker.com/engine/install/) installed.
 ```
 docker compose up
 ```
-Yeah, that's really it. It should now pull the Postgresql image & build the webserver.
+Yeah, that's really it. It should now pull the Postgresql image & build the webserver. You should still [setup Diesel & run the migrations](https://github.com/Hattorius/CipherDrop?tab=readme-ov-file#diesel-setup) though!
 
 ## Adding s3 buckets
 To add your s3 bucket to the database you'll need to attach to the postgres service in docker. First figure out what the postgres container name is:
@@ -35,7 +36,7 @@ You can replace `postgres_container` with the name of your postgres container. W
 
 ```sql
 INSERT INTO s3_buckets (bucket_name, region, endpoint, access_key, secret_key)
-VALUES ("NAME", "REGION", "ENDPOINT", "ACCESS_KEY", "SECRET_KEY")
+VALUES ('NAME', 'REGION', 'ENDPOINT', 'ACCESS_KEY', 'SECRET_KEY')
 ```
 With the following example bucket link: `my_bucket.fsn1.your-objectstorage.com` (Hetzner):  
 `NAME`: `my_bucket.fsn1`,  
@@ -55,6 +56,8 @@ docker compose -f compose-dev.yml up
 
 After this you need to copy the [`env.example`](https://github.com/Hattorius/CipherDrop/blob/main/backend/.env) into `.env` in the `backend` folder and change the `DATABASE_URL` value to your database connection string. (which should be `postgres://root:toor@localhost/db`)
 
+## Diesel setup
+
 Make sure to install the [Diesel](https://diesel.rs/guides/getting-started) cli. These are the commands I quickly copied over, but make sure to check if they're not outdated:
 ```shell
 # Linux/MacOS
@@ -68,6 +71,8 @@ Run the database migrations using diesel:
 ```shell
 diesel migration run
 ```  
+
+## Start
 
 Now finally start the server with hot reload:
 ```shell
