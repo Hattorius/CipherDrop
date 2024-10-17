@@ -8,9 +8,10 @@ use crate::{
     schema::{files, s3_buckets},
 };
 
-use super::models::{self, NewFile};
-
-type DbError = Box<dyn std::error::Error + Send + Sync>;
+use super::{
+    models::{self, NewFile},
+    DbError,
+};
 
 pub async fn get_s3_bucket(
     conn: &mut AsyncPgConnection,
@@ -76,4 +77,20 @@ pub async fn get_file_record(
     }
 
     Ok(found_file)
+}
+
+pub async fn get_expired_files(conn: &mut AsyncPgConnection) -> Result<Vec<models::File>, DbError> {
+    let current_time = Utc::now().naive_utc();
+
+    Ok(files::table
+        .filter(files::available_till.lt(current_time))
+        .load::<models::File>(conn)
+        .await?)
+}
+
+pub async fn delete_file(conn: &mut AsyncPgConnection, file_uuid: Uuid) -> Result<(), DbError> {
+    diesel::delete(files::table.filter(files::file.eq(file_uuid)))
+        .execute(conn)
+        .await?;
+    Ok(())
 }

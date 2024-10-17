@@ -1,24 +1,17 @@
-use actix_web::web;
+use diesel_async::AsyncPgConnection;
 use s3::Bucket;
 
-use crate::{
-    database::actions::{get_s3_bucket, get_s3_bucket_by_id},
-    DbPool,
-};
+use crate::database::actions::{get_s3_bucket, get_s3_bucket_by_id};
 
 pub struct S3Bucket {
     pub id: i32,
     pub bucket: Box<Bucket>,
 }
 
-pub async fn get_s3_bucket_info(pool: &web::Data<DbPool>) -> Option<S3Bucket> {
-    let bucket_info = if let Some(mut conn) = pool.get().await.ok() {
-        match get_s3_bucket(&mut conn).await {
-            Ok(maybe_bucket) => maybe_bucket,
-            Err(_) => None,
-        }
-    } else {
-        None
+pub async fn get_s3_bucket_info(conn: &mut AsyncPgConnection) -> Option<S3Bucket> {
+    let bucket_info = match get_s3_bucket(conn).await {
+        Ok(maybe_bucket) => maybe_bucket,
+        Err(_) => None,
     };
 
     let bucket_info = match bucket_info {
@@ -50,14 +43,10 @@ pub async fn get_s3_bucket_info(pool: &web::Data<DbPool>) -> Option<S3Bucket> {
     })
 }
 
-pub async fn get_s3_specific_bucket(pool: &web::Data<DbPool>, id: i32) -> Option<Box<Bucket>> {
-    let bucket_info = if let Some(mut conn) = pool.get().await.ok() {
-        match get_s3_bucket_by_id(&mut conn, id).await {
-            Ok(maybe_bucket) => Some(maybe_bucket),
-            Err(_) => return None,
-        }
-    } else {
-        return None;
+pub async fn get_s3_specific_bucket(conn: &mut AsyncPgConnection, id: i32) -> Option<Box<Bucket>> {
+    let bucket_info = match get_s3_bucket_by_id(conn, id).await {
+        Ok(maybe_bucket) => Some(maybe_bucket),
+        Err(_) => return None,
     };
 
     if let Some(bucket_info) = bucket_info {

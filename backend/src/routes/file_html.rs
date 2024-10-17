@@ -31,7 +31,19 @@ pub async fn file_html(
         }
     };
 
-    let file = match get_file(&pool, file_uuid).await {
+    let mut conn = match pool.get().await {
+        Ok(conn) => conn,
+        _ => {
+            ctx.insert("success", &false);
+            ctx.insert("msg", "Internal error, please try again later");
+            let rendered = tmpl.render("file.html", &ctx).map_err(|_| {
+                actix_web::error::ErrorInternalServerError("Template rendering error")
+            })?;
+            return Ok(HttpResponse::Ok().content_type("text/html").body(rendered));
+        }
+    };
+
+    let file = match get_file(&mut *conn, file_uuid).await {
         Ok(file) => file,
         _ => {
             ctx.insert("success", &false);
