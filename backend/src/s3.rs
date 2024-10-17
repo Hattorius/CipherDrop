@@ -2,7 +2,7 @@ use actix_web::web;
 use s3::Bucket;
 
 use crate::{
-    actions::{get_s3_bucket, get_s3_bucket_by_id},
+    database::actions::{get_s3_bucket, get_s3_bucket_by_id},
     DbPool,
 };
 

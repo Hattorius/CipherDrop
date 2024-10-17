@@ -3,9 +3,12 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    actions::{add_file_record, get_file_record},
     crypt::Encrypted,
-    models, DbPool,
+    database::{
+        actions::{add_file_record, get_file_record},
+        models,
+    },
+    DbPool,
 };
 
 pub async fn create_file(

@@ -5,12 +5,10 @@ use uuid::Uuid;
 
 use crate::{
     crypt::Encrypted,
-    models::{self, NewFile},
-    schema::{
-        files::{self, available_till, file},
-        s3_buckets,
-    },
+    schema::{files, s3_buckets},
 };
+
+use super::models::{self, NewFile};
 
 type DbError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -65,14 +63,14 @@ pub async fn get_file_record(
     file_uuid: Uuid,
 ) -> Result<models::File, DbError> {
     let found_file = files::table
-        .filter(file.eq(file_uuid))
+        .filter(files::file.eq(file_uuid))
         .first::<models::File>(conn)
         .await?;
 
     let new_available_till = Utc::now().naive_utc() + Duration::hours(24);
     if found_file.available_till < new_available_till {
-        let _ = diesel::update(files::table.filter(file.eq(file_uuid)))
-            .set(available_till.eq(new_available_till))
+        let _ = diesel::update(files::table.filter(files::file.eq(file_uuid)))
+            .set(files::available_till.eq(new_available_till))
             .execute(conn)
             .await?;
     }

@@ -6,10 +6,9 @@ use lazy_static::lazy_static;
 use routes::{download_file::download_file, file_html::file_html, upload::upload};
 use tera::Tera;
 
-mod actions;
 mod crypt;
+mod database;
 mod files;
-mod models;
 mod routes;
 mod s3;
 mod schema;
