@@ -22,7 +22,17 @@ pub async fn download_file(
         }
     };
 
-    let file = match get_file(&pool, file_uuid).await {
+    let mut conn = match pool.get().await {
+        Ok(conn) => conn,
+        _ => {
+            return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
+                success: false,
+                message: "Internal error, please try again later".to_string(),
+            }))
+        }
+    };
+
+    let file = match get_file(&mut *conn, file_uuid).await {
         Ok(file) => file,
         _ => {
             return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
@@ -32,7 +42,7 @@ pub async fn download_file(
         }
     };
 
-    let bucket = match s3::get_s3_specific_bucket(&pool, file.s3_bucket_id).await {
+    let bucket = match s3::get_s3_specific_bucket(&mut *conn, file.s3_bucket_id).await {
         Some(bucket) => bucket,
         None => {
             return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {

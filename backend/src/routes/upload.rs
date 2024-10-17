@@ -20,7 +20,17 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
     let mut encrypted_file = None;
     let mut lifetime: Option<i64> = None;
 
-    let bucket = match s3::get_s3_bucket_info(&pool).await {
+    let mut conn = match pool.get().await {
+        Ok(conn) => conn,
+        _ => {
+            return Ok(HttpResponse::InternalServerError().json(HttpApiResponse {
+                success: false,
+                message: "Internal error, please try again later".to_string(),
+            }))
+        }
+    };
+
+    let bucket = match s3::get_s3_bucket_info(&mut *conn).await {
         Some(bucket) => bucket,
         None => {
             return Ok(HttpResponse::ServiceUnavailable().json(HttpApiResponse {
@@ -152,7 +162,7 @@ async fn upload(pool: web::Data<DbPool>, mut payload: Multipart) -> Result<HttpR
     ) = (file_name, file_type, encrypted_file, unique_id, lifetime)
     {
         let result = create_file(
-            &pool,
+            &mut *conn,
             encrypted_file,
             unique_id,
             file_name,

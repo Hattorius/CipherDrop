@@ -1,15 +1,18 @@
+use std::sync::Arc;
+
 use actix_files::Files;
 use actix_web::{web, App, HttpServer};
 use deadpool::managed::Pool;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
+use jobs::cleanup_job;
 use lazy_static::lazy_static;
 use routes::{download_file::download_file, file_html::file_html, upload::upload};
 use tera::Tera;
 
-mod actions;
 mod crypt;
+mod database;
 mod files;
-mod models;
+mod jobs;
 mod routes;
 mod s3;
 mod schema;
@@ -29,6 +32,11 @@ async fn main() -> std::io::Result<()> {
     let pool: DbPool = Pool::builder(config)
         .build()
         .expect("Failed creating database pool");
+
+    let cleanup_pool = pool.clone();
+    tokio::spawn(async move {
+        let _ = cleanup_job(Arc::new(cleanup_pool)).await;
+    });
 
     HttpServer::new(move || {
         App::new()
