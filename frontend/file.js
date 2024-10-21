@@ -102,9 +102,13 @@ const handleFile = async bytes => {
     a.href = url;
     a.download = file.name;
     a.style.display = 'none';
+    document.body.appendChild(a);
+
     a.onclick = () => {
-        console.log('hi');
-        URL.revokeObjectURL(url)
+        setTimeout(() => {
+            URL.revokeObjectURL(url)
+            document.body.removeChild(a);
+        }, 500);
     };
 
     success();
