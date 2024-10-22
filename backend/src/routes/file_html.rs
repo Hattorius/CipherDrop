@@ -6,8 +6,8 @@ use crate::{files::get_file, DbPool};
 
 #[derive(Deserialize)]
 struct SearchParams {
-    v: String,
-    k: String,
+    v: Option<String>,
+    k: Option<String>,
 }
 
 #[get("/file/{file_uuid}")]

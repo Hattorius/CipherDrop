@@ -5,8 +5,8 @@ const errorP = document.querySelector('.error');
 
 const uuid = document.querySelector('input#uuid').value;
 const availableTill = document.querySelector('input#available_till').value;
-const iv = document.querySelector('input#iv').value;
-const key = document.querySelector('input#key').value;
+var iv = document.querySelector('input#iv').value;
+var key = document.querySelector('input#key').value;
 const mimeType = document.querySelector('input#mime_type').value;
 const fileName = document.querySelector('input#file_name').value;
 
@@ -87,6 +87,12 @@ const handleFile = async bytes => {
     currentProgress = 80;
 
     if (file === null) {
+        if (iv === "" || key === "") {
+            const fragments = window.location.hash.substring(1).split('~');
+            iv = fragments[0];
+            key = fragments[1];
+        }
+
         file = await decryptFile(
             bytes,
             key,
