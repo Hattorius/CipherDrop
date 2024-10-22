@@ -67,7 +67,7 @@ class FileUpload {
             const body = JSON.parse(xhr.responseText);
 
             if (body.success) {
-                this.success(`${window.location.protocol}//${window.location.hostname}/file/${body.uuid}?v=${file.iv}&k=${file.key}`);
+                this.success(`${window.location.protocol}//${window.location.hostname}/file/${body.uuid}#${file.iv}~${file.key}`);
             } else {
                 this.error(body.message);
             }
