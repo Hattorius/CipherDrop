@@ -20,9 +20,13 @@ jobs:
 
     - name: Set up Rust cache
       uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: "backend -> target"
+        cache-targets: "true"
 
     - name: Build the Rust project
       run: |
+        cd backend
         cargo build --release
 
     - name: Verify the build output
