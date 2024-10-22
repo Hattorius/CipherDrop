@@ -1,0 +1,34 @@
+name: Test server build and run
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+
+    - name: Set up Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: "backend -> target"
+        cache-targets: "true"
+
+    - name: Build the Rust project
+      run: |
+        cd backend
+        cargo build --release
+
+    - name: Verify the build output
+      run: |
+        ls -l backend/target/release/

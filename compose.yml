@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:17
     container_name: postgres_container
     environment:
       POSTGRES_USER: root
@@ -12,6 +12,7 @@ services:
      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: always
 
   backend:
     build: .
@@ -29,6 +30,7 @@ services:
       done &&
       ./backend
       "
+    restart: always
 
 volumes:
   postgres_data:
