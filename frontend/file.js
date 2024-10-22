@@ -52,7 +52,7 @@ button.addEventListener('click', () => {
 
     xhr.onload = () => {
         if (xhr.status === 200) {
-            handleFile(xhr.response);
+            handleFile(xhr.response).catch(() => error("Failed decrypting file."));
         } else {
             const data = JSON.parse(xhr.responseText);
             error(data.message);
