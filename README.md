@@ -24,7 +24,7 @@ Yeah, that's really it. It should now pull the Postgresql image & build the webs
 ## Adding s3 buckets
 To add your s3 bucket to the database you'll need to attach to the postgres service in docker. First figure out what the postgres container name is:
 ```
-> $ docker ps                                              ⬡ 18.18.1 [±main ●]
+> $ docker ps
 CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS         PORTS                    NAMES
 de605f0e7c17   cipherdrop-backend   "backend sh -c ' unt…"   9 minutes ago   Up 3 seconds   0.0.0.0:8080->8080/tcp   cipherdrop
 1333910cccd8   postgres:latest      "docker-entrypoint.s…"   9 minutes ago   Up 3 seconds   5432/tcp                 postgres_container
