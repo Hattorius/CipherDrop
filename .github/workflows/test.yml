@@ -31,4 +31,4 @@ jobs:
 
     - name: Verify the build output
       run: |
-        ls -l target/release/
+        ls -l backend/target/release/
