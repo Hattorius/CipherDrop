@@ -48,10 +48,6 @@ jobs:
         echo "Backend did not start within the timeout period"
         exit 1
 
-    - name: Check if backend is running
-      run: |
-        curl --fail http://localhost:8080 || exit 1
-
     - name: Clean up Docker containers
       if: always()
       run: docker compose down
