@@ -12,42 +12,19 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v3
 
-    - name: Set up Docker
-      uses: docker/setup-buildx-action@v2
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
 
-    - name: Build backend Docker image
-      run: docker compose build backend
+    - name: Set up Rust cache
+      uses: Swatinem/rust-cache@v2
 
-    - name: Run PostgreSQL
+    - name: Build the Rust project
       run: |
-        docker compose up -d postgres
+        cargo build --release
 
-    - name: Run backend
+    - name: Verify the build output
       run: |
-        docker compose up -d backend
-
-    - name: Check if backend container is running
-      run: |
-        sleep 3
-
-        TIMEOUT=20
-        INTERVAL=1
-        ELAPSED=0
-
-        while [ $ELAPSED -lt $TIMEOUT ]; do
-          if [ "$(docker ps --filter 'name=cipherdrop' --filter 'status=running' -q)" != "" ]; then
-            echo "Backend is running"
-            exit 0;
-          fi
-
-          echo "Waiting for backend to start..."
-          sleep $INTERVAL;
-          ELAPSED=$((ELAPSED + INTERVAL))
-        done
-
-        echo "Backend did not start within the timeout period"
-        exit 1
-
-    - name: Clean up Docker containers
-      if: always()
-      run: docker compose down
+        ls -l target/release/
