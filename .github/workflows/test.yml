@@ -1,0 +1,36 @@
+name: Test server build and run
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build backend Docker image
+      run: docker compose build backend
+
+    - name: Run PostgreSQL
+      run: |
+        docker compose up -d postgres
+
+    - name: Run backend
+      run: |
+        docker compose up -d backend
+
+    - name: Check if backend is running
+      run: |
+        docker ps
+        curl --fail http://localhost:8080 || exit 1
+
+    - name: Clean up Docker containers
+      if: always()
+      run: docker compose down
