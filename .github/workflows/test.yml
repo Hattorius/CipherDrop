@@ -28,6 +28,8 @@ jobs:
 
     - name: Check if backend container is running
       run: |
+        sleep 3
+
         TIMEOUT=20
         INTERVAL=1
         ELAPSED=0
@@ -48,7 +50,6 @@ jobs:
 
     - name: Check if backend is running
       run: |
-        docker ps
         curl --fail http://localhost:8080 || exit 1
 
     - name: Clean up Docker containers
