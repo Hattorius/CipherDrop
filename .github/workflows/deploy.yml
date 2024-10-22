@@ -23,6 +23,9 @@ jobs:
     - name: Run deployment
       run: |
         ssh -o StrictHostKeyChecking=no root@cipherdrop.sh << 'EOF'
+          set -e
+          trap 'docker compose up -d' ERR
+
           cd /root/CipherDrop
           git reset --hard
           git pull
@@ -34,7 +37,11 @@ jobs:
           docker compose build backend
 
           docker compose down
+          sleep 5
+          docker network rm cipherdrop_default || true
+
           docker compose up -d
 
-          docker system prune -f
+          docker image prune -f
+          docker container prune -f
         EOF
