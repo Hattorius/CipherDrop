@@ -175,7 +175,7 @@ const decryptFile = async (encryptedData, encodedKey, encodedIv, mimeType, fileN
 
 // Calculate time remaining and put it in the HTML
 const now = Math.floor(Date.now() / 1000);
-const timeLeft = availability - now;
+const timeLeft = availableTill - now;
 
 if (timeLeft <= 0) {
     availability.innerText = "This file is unavailable";
