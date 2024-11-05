@@ -2,6 +2,7 @@ const button = document.querySelector('button');
 const loader = document.querySelector('.loader');
 const availability = document.querySelector('.availability');
 const errorP = document.querySelector('.error');
+const infoP = document.querySelector('.info');
 
 const uuid = document.querySelector('input#uuid').value;
 const availableTill = parseInt(document.querySelector('input#available_till').value);
@@ -42,7 +43,7 @@ button.addEventListener('click', () => {
         return handleFile(null);
     }
 
-    startProgress();
+    startingDownload();
 
     const xhr = new XMLHttpRequest();
     xhr.open('GET', `/api/file/${uuid}/download`, true);
@@ -50,6 +51,10 @@ button.addEventListener('click', () => {
 
     xhr.onprogress = event => {
         if (event.lengthComputable) {
+            if (state == 0 && currentProgress == 0) {
+                startProgress();
+            }
+
             const percentComplete = (event.loaded / event.total) * 80;
             currentProgress = percentComplete;
         }
@@ -72,16 +77,28 @@ button.addEventListener('click', () => {
 });
 
 const progress = percent => {
+    infoP.classList.add('hidden');
     loader.classList.remove('hidden');
     loader.querySelector('div.inner').style.width = `${percent}%`;
 }
 
+const startingDownload = () => {
+    infoP.classList.remove('hidden');
+    infoP.innerText = "Starting download..";
+}
+
 const success = () => {
     state = 2;
+
+    setTimeout(() => {
+        infoP.classList.remove('hidden');
+        infoP.innerText = "Download successful";
+    }, 500);
 }
 
 const error = msg => {
     stopProgress();
+    infoP.classList.add('hidden');
     errorP.classList.remove('hidden');
     errorP.innerText = msg;
 }
