@@ -18,10 +18,8 @@ var intervalId;
 
 const startProgress = () => {
     intervalId = setInterval(() => {
-        if (currentProgress < 80) {
-            currentProgress += 5;
-        } else if (currentProgress < 95 && state === 1) {
-            currentProgress += 5;
+        if (currentProgress < 95 && state === 1) {
+            currentProgress += 2.5;
         } else if (state === 2) {
             currentProgress = 100;
             clearInterval(intervalId);
@@ -49,6 +47,13 @@ button.addEventListener('click', () => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', `/api/file/${uuid}/download`, true);
     xhr.responseType = 'arraybuffer';
+
+    xhr.onprogress = event => {
+        if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 80;
+            currentProgress = percentComplete;
+        }
+    };
 
     xhr.onload = () => {
         if (xhr.status === 200) {
