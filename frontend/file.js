@@ -4,7 +4,7 @@ const availability = document.querySelector('.availability');
 const errorP = document.querySelector('.error');
 
 const uuid = document.querySelector('input#uuid').value;
-const availableTill = document.querySelector('input#available_till').value;
+const availableTill = parseInt(document.querySelector('input#available_till').value);
 var iv = document.querySelector('input#iv').value;
 var key = document.querySelector('input#key').value;
 const mimeType = document.querySelector('input#mime_type').value;
@@ -170,4 +170,27 @@ const decryptFile = async (encryptedData, encodedKey, encodedIv, mimeType, fileN
             type: mimeType
         }
     );
+}
+
+
+// Calculate time remaining and put it in the HTML
+const now = Math.floor(Date.now() / 1000);
+const timeLeft = availability - now;
+
+if (timeLeft <= 0) {
+    availability.innerText = "This file is unavailable";
+} else {
+    const days = Math.floor(timeLeft / (60 * 60 * 24));
+    const hours = Math.floor(timeLeft / (60 * 60));
+    const minutes = Math.floor(timeLeft / 60);
+
+    if (days > 0) {
+        availability.innerText = `File available for the next ${days} day${days > 1 ? 's' : ''}`
+    } else if (hours > 0) {
+        availability.innerText = `File available for the next ${hours} hour${hours > 1 ? 's' : ''}`
+    } else if (minutes > 0) {
+        availability.innerText = `File available for the next ${minutes} minute${minutes > 1 ? 's' : ''}`
+    } else {
+        availability.innerText = "File is available for the next <1 minute"
+    }
 }
