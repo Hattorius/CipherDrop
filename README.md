@@ -2,9 +2,9 @@
 
 Goal: Create an anonymous file hosting service.
 
-Available at
-- https://cipherdrop.sh
-- http://7li2aq2wefmr7ypllk36qyf2ueagvywurhvvmpafadmkgidmgyftetqd.onion
+**Not publicly available anymore.**
+
+The domain I had (**cipherdrop.sh**) got blacklisted/blocked by multiple services like Spamhaus. While I firmly believe CipherDrop itself isn't a bad service and that privacy is a fundamental right, I've decided to take this offline. I encourage anyone interested to set it up again using the details provided here. All the code and documentation remain available for anyone who shares the same vision for anonymous and secure file hosting.
 
 ## Features
 - Encrypt file on client
